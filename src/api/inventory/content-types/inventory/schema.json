@@ -1,0 +1,47 @@
+{
+  "kind": "collectionType",
+  "collectionName": "inventories",
+  "info": {
+    "singularName": "inventory",
+    "pluralName": "inventories",
+    "displayName": "inventory"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "num_inv": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "cat_tipo": {
+      "type": "string"
+    },
+    "sec_pdci": {
+      "type": "string"
+    },
+    "denominazione": {
+      "type": "string"
+    },
+    "matricola": {
+      "type": "string"
+    },
+    "annotazioni": {
+      "type": "text"
+    },
+    "stanza": {
+      "type": "string"
+    },
+    "possessori": {
+      "type": "string"
+    },
+    "last_update": {
+      "type": "date"
+    },
+    "fuori_uso": {
+      "type": "boolean"
+    }
+  }
+}
