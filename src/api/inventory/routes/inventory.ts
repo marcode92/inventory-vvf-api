@@ -10,6 +10,14 @@ export default {
             }
         },
         {
+            method:'GET',
+            path:'/inventories/readoneass',
+            handler:'inventory.findOne',
+            config: {
+                auth:false,
+            }
+        },
+        {
             method:'POST',
             path:'/inventories/addass',
             handler:'inventory.create',

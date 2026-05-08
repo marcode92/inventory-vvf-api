@@ -9,8 +9,14 @@ export default factories.createCoreController('api::inventory.inventory', ({ str
     const result = await strapi.db.connection.raw('SELECT * FROM assignment');
     return result[0];
   },
+  async findOne(ctx){
+    console.log("sono qui e stampo debug",ctx.query)
+    const {num_inv} = ctx.query;
+    console.log("sono qui e stampo debug",num_inv)
+    const result = await strapi.db.connection.raw('SELECT * FROM assignment where num_inv = ?',[num_inv]);
+    return result[0];
+  },
   async create(ctx) {
-    console.log("body", ctx.request)
     try {
       const {
         num_inv,
