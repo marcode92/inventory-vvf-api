@@ -2,16 +2,16 @@ const path = require('path');
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
-const pippo = require('./db')
+const pool = require('./db')
 const app = express();
 const frontendPath = path.join(__dirname, '../frontend/dist/inventory/browser');
 
 app.use(express.static(frontendPath));
 
 
-pippo.query('SELECT NOW()')
-    .then(result => console.log('connesso',result.rows))
-    .catch(error => console.error('errore',error));
+pool.query('SELECT NOW()')
+    .then(result => console.log('connesso', result.rows))
+    .catch(error => console.error('errore', error));
 
 /* 
 
@@ -41,111 +41,153 @@ app.use(cors({
     origin: "http://localhost:4200"
 }));
 app.use(express.json())
-
-//const client = new MongoClient("mongodb://localhost:27017");
-
-async function start(){
-    await client.connect();
-    console.log("qui connesso")
-    const db = client.db("inventory_vvf");
-    
-    /************ASSETS SECTION*****************/
-    const assets = db.collection("assets");
-
-app.delete('/api/inventories/deleteasset', async (req, res) => {
-  try {
-    const matricola = req.query.matricola;
-    console.log("stampa ", matricola)
-    const result = await assets.deleteOne({matricola});
-
-    return res.json(result);
-
-  } catch (error) {
-    return res.status(500).json({ error: 'Errore eliminazione' });
-  }
-});
-
-    app.get("/api/inventories/assetshome", async (req,res) => {
-        const risultati = await assets.find(
-            {},
-            { projection: {
-                annotazioni:1,
-                fuori_uso:1,
-                last_update:1,
-                matricola:1,
-                possessori:1,
-                stanza:1,
-            }
-        }).toArray();
-
-        res.json(risultati);
-    });
-    
-    app.get("/api/inventories/assetonefull", async (req,res) => {
-        const matricola = req.query.matricola;
-        const risultati = await assets.findOne({matricola});
-        
-        res.json(risultati);
-    });
-    
-    app.post('/api/inventories/assets', async (req, res) => {
-    const dati = req.body;
-    const risultato = assets.insertOne(dati);
-    
-    res.json({
-        salvato: true,
-    });
-});
-
-app.put('/api/inventories/updateasset', async (req,res) =>{
-    const matricola = req.query.matricola;
-    const item = req.body
-    const results = await assets.updateOne({matricola},{$set:item});
-    res.json(results);
-})
-    /*****************************************/
-
-    /************TYPE SECTION*****************/
-    const modeltypes = db.collection("type");
-    app.post('/api/inventories/type', async (req, res) => {
-
-    let dati = req.body;
-
-    const risultato = await modeltypes.insertOne(dati);
-    
-    res.json({
-        salvato: true,
-    });
-    });
-
-    app.get('/api/inventories/typelist', async (req,res) =>{
-        const results = await modeltypes.find({}).toArray();
-
-        res.json(results);
+/****MODELLO******/
+app.get('/creamodelli', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM modello'
+        )
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
 })
 
-    app.get('/api/inventories/modelnames', async (req,res) =>{
-        const results = await modeltypes.find({}, 
-            { projection:{ nomeModello:1, _id:0 }}).toArray();
+app.put('/modelli/:id', async (req, res) => {
+    id = req.params.id;
+    const modello = req.body
+    try {
+        const result = await pool.query(
+            'SELECT * FROM ARTICOLO WHERE id_modello = $1', [id])
+        if (result.rowCount > 0)
+            return res.status(409).json({
+                message: "articoli inventariati, modifica non consentita"
+            })
 
-        res.json(results.map(nome => nome.nomeModello));
+        await pool.query(
+            `UPDATE modello 
+            SET
+             nome_modello = $1,
+             categoria = $2,
+             sottocategoria = $3,
+             quantita = $4,
+             caratteristiche = $5
+            WHERE id_modello = $6
+                 RETURNING *`,
+            [
+                modello.nome_modello,
+                modello.categoria,
+                modello.sottocategoria,
+                modello.quantita,
+                JSON.stringify(modello.caratteristiche),
+                req.params.id
+            ])
+        return res.status(200).json({
+            message: "articolo aggiornato"
+        })
+
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 })
 
-    app.get('/api/inventories/type', async (req,res) =>{
-        const name = req.query.modelname;
-        const results = await modeltypes.findOne({nomeModello: name});
+app.post('/modelli', async (req, res) => {
+    const modelToCreate = req.body;
 
-        res.json(results);
+    const date = req.body.datapippo;
+    try {
+
+        const result = await pool.query(
+            `INSERT INTO modello (
+                    nome_modello,
+                    categoria,
+                    sottocategoria,
+                    quantita,
+                    stato,
+                    caratteristiche,
+                    creation_date
+                    )
+                VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE) RETURNING *`, [
+            modelToCreate.nome_modello,
+            modelToCreate.categoria,
+            modelToCreate.sottocategoria,
+            modelToCreate.quantita,
+            modelToCreate.stato,
+            JSON.stringify(modelToCreate.caratteristiche)
+        ])
+        res.status(201).json({ message: 'creato', result: result.rows[0] });
+
+    } catch (error) {
+        if (error.code = "23505") {
+            return res.status(409).json({
+                message: "Modello già esistente"
+            })
+        }
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
 })
 
-/****************START FRONTEND */
-app.get('/{*path}', (req, res) => {
-    res.sendFile(path.join(frontendPath, 'index.html'));
-});
-/*********************************/
-    app.listen(3000, () => {
-        console.log("api 3000")
-    })
-}
+/******ARTICOLO****************/
+app.post('/articolo', async (req, res) => {
+    const articleToAdd = req.body;
 
-start();
+    try {
+        const checkqty = await pool.query(
+            `SELECT
+                m.quantita - COUNT(a.num_inventario) AS disponibili
+                 FROM modello m
+                 LEFT JOIN articolo a ON m.id_modello = a.id_modello
+                 WHERE m.id_modello = $1
+                 GROUP BY m.id_modello, m.quantita`, [articleToAdd.id_modello])
+         if(checkqty.rows[0].disponibili == 0)
+         return res.status(409).json({
+                err:'TUTTI',
+                message: 'ARTICOLI TUTTI INVENTARIATI'
+            });    
+
+        const result = await pool.query(
+            `INSERT INTO articolo (
+                    num_inventario,
+                    id_modello,
+                    seriale,
+                    stato,
+                    posizione,
+                    last_move,
+                    data_inventario
+                    )
+                VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE) RETURNING *`, [
+            articleToAdd.num_inventario,
+            articleToAdd.id_modello,
+            articleToAdd.seriale,
+            articleToAdd.stato,
+            articleToAdd.posizione,
+            articleToAdd.last_move,
+        ])
+        res.status(201).json({ message: 'creato', result: result.rows[0] });
+
+    } catch (error) {
+        if (error.code === '23505' && error.constraint === 'unique_seriale') {
+            return res.status(409).json({
+                message: 'Esiste già un articolo con questo numero seriale'
+            });
+        }
+        if (error.code === '23505' && error.constraint === 'articolo_pkey') {
+            return res.status(409).json({
+                message: 'Esiste già un articolo con questo numero inventario'
+            });
+        }
+        if (error.code === '23514' && error.constraint === 'stato_articolo_valido') {
+            return res.status(400).json({
+                message: 'Stato e posizione dell’articolo non coerenti'
+            });
+        }
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+})
+
+app.listen(3000, () => {
+    console.log('server avviato sulla porta 3000')
+})

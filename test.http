@@ -1,0 +1,12 @@
+POST http://localhost:3000/articolo
+Content-Type: application/json
+
+{
+    "num_inventario":"123123132343",
+    "id_modello":"18",
+    "seriale":"3122442",
+    "stato":"ASSEGNATO",
+    "posizione":"UFFICIO INFORMATICO",
+    "last_move":"2026-05-05",
+    "data_inventario":"2025-04-03"
+}
