@@ -1,9 +1,9 @@
 const path = require('path');
 const express = require("express");
 const cors = require("cors");
-const { Pool } = require("pg");
 const pool = require('./db')
 const app = express();
+const MESSAGES = require('./constants/messages');
 const frontendPath = path.join(__dirname, '../frontend/dist/inventory/browser');
 
 app.use(express.static(frontendPath));
@@ -42,7 +42,7 @@ app.use(cors({
 }));
 app.use(express.json())
 /****MODELLO******/
-app.get('/creamodelli', async (req, res) => {
+app.get('/modello', async (req, res) => {
     try {
         const result = await pool.query(
             'SELECT * FROM modello'
@@ -54,7 +54,20 @@ app.get('/creamodelli', async (req, res) => {
     }
 })
 
-app.put('/modelli/:id', async (req, res) => {
+app.get('/modello', async (req, res) => {
+    id = req.params.id;
+    try {
+        const result = await pool.query(
+            'SELECT * FROM modello WHERE id_modello = $1', [id]
+        )
+        res.json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+})
+
+app.put('/modello/:id', async (req, res) => {
     id = req.params.id;
     const modello = req.body
     try {
@@ -84,7 +97,7 @@ app.put('/modelli/:id', async (req, res) => {
                 req.params.id
             ])
         return res.status(200).json({
-            message: "articolo aggiornato"
+            message: MESSAGES.ARTICLE_UPDATED
         })
 
     } catch (error) {
@@ -92,7 +105,7 @@ app.put('/modelli/:id', async (req, res) => {
     }
 })
 
-app.post('/modelli', async (req, res) => {
+app.post('/modello', async (req, res) => {
     const modelToCreate = req.body;
 
     const date = req.body.datapippo;
@@ -116,12 +129,12 @@ app.post('/modelli', async (req, res) => {
             modelToCreate.stato,
             JSON.stringify(modelToCreate.caratteristiche)
         ])
-        res.status(201).json({ message: 'creato', result: result.rows[0] });
+        res.status(201).json({ message: MESSAGES.MODEL_CREATED, result: result.rows[0] });
 
     } catch (error) {
         if (error.code = "23505") {
             return res.status(409).json({
-                message: "Modello già esistente"
+                message: MESSAGES.MODEL_EXISTING
             })
         }
         console.error(error);
@@ -141,11 +154,11 @@ app.post('/articolo', async (req, res) => {
                  LEFT JOIN articolo a ON m.id_modello = a.id_modello
                  WHERE m.id_modello = $1
                  GROUP BY m.id_modello, m.quantita`, [articleToAdd.id_modello])
-         if(checkqty.rows[0].disponibili == 0)
-         return res.status(409).json({
-                err:'TUTTI',
+        if (checkqty.rows[0].disponibili == 0)
+            return res.status(409).json({
+                err: 'TUTTI',
                 message: 'ARTICOLI TUTTI INVENTARIATI'
-            });    
+            });
 
         const result = await pool.query(
             `INSERT INTO articolo (
@@ -165,22 +178,22 @@ app.post('/articolo', async (req, res) => {
             articleToAdd.posizione,
             articleToAdd.last_move,
         ])
-        res.status(201).json({ message: 'creato', result: result.rows[0] });
+        res.status(201).json({ message: MESSAGES.ARTICLE_CREATED, result: result.rows[0] });
 
     } catch (error) {
         if (error.code === '23505' && error.constraint === 'unique_seriale') {
             return res.status(409).json({
-                message: 'Esiste già un articolo con questo numero seriale'
+                message: MESSAGES.ARTICLE_SERIAL_EXISTING
             });
         }
         if (error.code === '23505' && error.constraint === 'articolo_pkey') {
             return res.status(409).json({
-                message: 'Esiste già un articolo con questo numero inventario'
+                message: MESSAGES.ARTICLE_NUMINV_EXISTING
             });
         }
         if (error.code === '23514' && error.constraint === 'stato_articolo_valido') {
             return res.status(400).json({
-                message: 'Stato e posizione dell’articolo non coerenti'
+                message: MESSAGES.STATE_POSITION_NOT_VALID
             });
         }
         console.error(error);
@@ -188,6 +201,71 @@ app.post('/articolo', async (req, res) => {
     }
 })
 
+/*CATEGORIA*/
+
+app.get('/categoria', async (req, res) => {
+try {
+    const result = await pool.query(`SELECT * FROM CATEGORIA`)
+
+        res.json(result.rows)
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+})
+
+app.get('/sottocategoria/:id', async (req, res) => {
+    const id = req.params.id;
+try {
+    const result = await pool.query(`SELECT * FROM SOTTOCATEGORIA WHERE ID_CATEGORIA = ($1)`,[id])
+
+        res.json(result.rows)
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+})
+
+app.post('/categoria', async (req, res) => {
+   
+    const categoria = req.body;
+
+    try {
+        const result = await pool.query(`INSERT INTO CATEGORIA (
+                    nome_categoria)
+                VALUES ($1)`,[categoria.nome_categoria])
+
+        res.status(201).json({
+            message: MESSAGES.CATEGORIA_CREATA,result: result.rows[0]
+        })
+    } catch (error) {
+        if(error.constraint === 'categoria_nome_categoria_key')
+        {res.status(409).json({ message: MESSAGES.CATEGORIA_NAME_EXISTING});}
+        if(error.constraint === 'categoria_nome_categoria_not_null')
+            {res.status(409).json({ message: MESSAGES.CATEGORIA_NAME_EMPTY});}
+    }
+})
+
+/*SOTTOCATEGORIA*/
+app.post('/sottocategoria', async (req, res) => {
+    const sottocategoria = req.body;
+    const id_categoria = req.params.id_categoria
+    try {
+        const result = await pool
+            .query(`INSERT INTO SOTTOCATEGORIA (
+                    nome_sottocategoria,
+                    id_categoria,
+                    CURRENT_DATE)
+                VALUES ($1, $2) RETURNING *`, [sottocategoria.nome_sottocategoria, id_categoria])
+
+        res.status(201).json({
+            message: MESSAGES.SOTTOCATEGORIA_CREATED
+        })
+    } catch (error) {
+        if(error.constraint === 'sottocategoria_nome_sottocategoria_key')
+        {res.status(409).json({ message: MESSAGES.SOTTOCATEGORIA_NAME_EXISTING});}
+        if(error.constraint === 'sottocategoria_nome_sottocategoria_not_null')
+            {res.status(409).json({ message: MESSAGES.SOTTOCATEGORIA_NAME_EMPTY});}
+    }
+})
 app.listen(3000, () => {
-    console.log('server avviato sulla porta 3000')
+    console.log(MESSAGES.SERVER_STARTED)
 })
