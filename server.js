@@ -213,6 +213,30 @@ try {
 }
 })
 
+app.get('/categoria/:id', async (req, res) => {
+    const id = req.params.id;
+try {
+    const result = await pool.query(`SELECT * FROM CATEGORIA WHERE ID=($1)`,[id])
+
+        res.json(result.rows[0])
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+})
+
+app.get('/sottocategoria/:id/:idscat', async (req, res) => {
+    const id = req.params.id;
+    const idscat = req.params.idscat;
+
+try {
+    const result = await pool.query(`SELECT * FROM SOTTOCATEGORIA WHERE ID_CATEGORIA=($1) AND ID=($2)`,[id,idscat])
+
+        res.json(result.rows[0])
+} catch (error) {
+    res.status(500).json({ error: error.message });
+}
+})
+
 app.get('/sottocategoria/:id', async (req, res) => {
     const id = req.params.id;
 try {
