@@ -55,7 +55,7 @@ app.get('/modello', async (req, res) => {
 })
 
 app.get('/modello', async (req, res) => {
-    id = req.params.id;
+    id = req.query.id;
     try {
         const result = await pool.query(
             'SELECT * FROM modello WHERE id_modello = $1', [id]
@@ -66,7 +66,18 @@ app.get('/modello', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 })
-
+app.get('/nomemodello', async (req, res) => {
+    nome_modello = req.query.nome_modello;
+    try {
+        const result = await pool.query(
+            'SELECT nome_modello FROM modello WHERE nome_modello = $1', [nome_modello]
+        )
+        res.json(result.rows[0]?.nome_modello ?? null);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+})
 app.put('/modello/:id', async (req, res) => {
     id = req.params.id;
     const modello = req.body
@@ -114,27 +125,24 @@ app.post('/modello', async (req, res) => {
         const result = await pool.query(
             `INSERT INTO modello (
                     nome_modello,
-                    categoria,
-                    sottocategoria,
-                    quantita,
-                    stato,
+                    id_categoria,
+                    id_sottocategoria,
                     caratteristiche,
                     creation_date
                     )
-                VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE) RETURNING *`, [
+                VALUES ($1, $2, $3, $4, CURRENT_DATE) RETURNING *`, [
             modelToCreate.nome_modello,
-            modelToCreate.categoria,
-            modelToCreate.sottocategoria,
-            modelToCreate.quantita,
-            modelToCreate.stato,
-            JSON.stringify(modelToCreate.caratteristiche)
+            modelToCreate.id_categoria,
+            modelToCreate.id_sottocategoria,
+            JSON.stringify(modelToCreate.campi)
         ])
         res.status(201).json({ message: MESSAGES.MODEL_CREATED, result: result.rows[0] });
 
     } catch (error) {
         if (error.code = "23505") {
             return res.status(409).json({
-                message: MESSAGES.MODEL_EXISTING
+                message: MESSAGES.MODEL_EXISTING,
+                error: error.detail
             })
         }
         console.error(error);
