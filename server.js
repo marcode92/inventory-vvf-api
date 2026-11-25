@@ -104,7 +104,7 @@ app.put('/modello/:id', async (req, res) => {
                 modello.categoria,
                 modello.sottocategoria,
                 modello.quantita,
-                JSON.stringify(modello.caratteristiche),
+                modello.caratteristiche,
                 req.params.id
             ])
         return res.status(200).json({
@@ -134,7 +134,7 @@ app.post('/modello', async (req, res) => {
             modelToCreate.nome_modello,
             modelToCreate.id_categoria,
             modelToCreate.id_sottocategoria,
-            JSON.stringify(modelToCreate.campi)
+            modelToCreate.caratteristiche,
         ])
         res.status(201).json({ message: MESSAGES.MODEL_CREATED, result: result.rows[0] });
 
@@ -212,67 +212,65 @@ app.post('/articolo', async (req, res) => {
 /*CATEGORIA*/
 
 app.get('/categoria', async (req, res) => {
-try {
-    const result = await pool.query(`SELECT * FROM CATEGORIA`)
+    try {
+        const result = await pool.query(`SELECT * FROM CATEGORIA`)
 
         res.json(result.rows)
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 })
 
 app.get('/categoria/:id', async (req, res) => {
     const id = req.params.id;
-try {
-    const result = await pool.query(`SELECT * FROM CATEGORIA WHERE ID=($1)`,[id])
+    try {
+        const result = await pool.query(`SELECT * FROM CATEGORIA WHERE ID=($1)`, [id])
 
         res.json(result.rows[0])
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 })
 
 app.get('/sottocategoria/:id/:idscat', async (req, res) => {
     const id = req.params.id;
     const idscat = req.params.idscat;
 
-try {
-    const result = await pool.query(`SELECT * FROM SOTTOCATEGORIA WHERE ID_CATEGORIA=($1) AND ID=($2)`,[id,idscat])
+    try {
+        const result = await pool.query(`SELECT * FROM SOTTOCATEGORIA WHERE ID_CATEGORIA=($1) AND ID=($2)`, [id, idscat])
 
         res.json(result.rows[0])
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 })
 
 app.get('/sottocategoria/:id', async (req, res) => {
     const id = req.params.id;
-try {
-    const result = await pool.query(`SELECT * FROM SOTTOCATEGORIA WHERE ID_CATEGORIA = ($1)`,[id])
+    try {
+        const result = await pool.query(`SELECT * FROM SOTTOCATEGORIA WHERE ID_CATEGORIA = ($1)`, [id])
 
         res.json(result.rows)
-} catch (error) {
-    res.status(500).json({ error: error.message });
-}
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 })
 
 app.post('/categoria', async (req, res) => {
-   
+
     const categoria = req.body;
 
     try {
         const result = await pool.query(`INSERT INTO CATEGORIA (
                     nome_categoria)
-                VALUES ($1)`,[categoria.nome_categoria])
+                VALUES ($1)`, [categoria.nome_categoria])
 
         res.status(201).json({
-            message: MESSAGES.CATEGORIA_CREATA,result: result.rows[0]
+            message: MESSAGES.CATEGORIA_CREATA, result: result.rows[0]
         })
     } catch (error) {
-        if(error.constraint === 'categoria_nome_categoria_key')
-        {res.status(409).json({ message: MESSAGES.CATEGORIA_NAME_EXISTING});}
-        if(error.constraint === 'categoria_nome_categoria_not_null')
-            {res.status(409).json({ message: MESSAGES.CATEGORIA_NAME_EMPTY});}
+        if (error.constraint === 'categoria_nome_categoria_key') { res.status(409).json({ message: MESSAGES.CATEGORIA_NAME_EXISTING }); }
+        if (error.constraint === 'categoria_nome_categoria_not_null') { res.status(409).json({ message: MESSAGES.CATEGORIA_NAME_EMPTY }); }
     }
 })
 
@@ -292,10 +290,31 @@ app.post('/sottocategoria', async (req, res) => {
             message: MESSAGES.SOTTOCATEGORIA_CREATED
         })
     } catch (error) {
-        if(error.constraint === 'sottocategoria_nome_sottocategoria_key')
-        {res.status(409).json({ message: MESSAGES.SOTTOCATEGORIA_NAME_EXISTING});}
-        if(error.constraint === 'sottocategoria_nome_sottocategoria_not_null')
-            {res.status(409).json({ message: MESSAGES.SOTTOCATEGORIA_NAME_EMPTY});}
+        if (error.constraint === 'sottocategoria_nome_sottocategoria_key') { res.status(409).json({ message: MESSAGES.SOTTOCATEGORIA_NAME_EXISTING }); }
+        if (error.constraint === 'sottocategoria_nome_sottocategoria_not_null') { res.status(409).json({ message: MESSAGES.SOTTOCATEGORIA_NAME_EMPTY }); }
+    }
+})
+
+/*ARRIVI*/
+
+app.get('/arrivi/modello', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT  m.*,
+                c.nome_categoria,
+                s.nome_sottocategoria
+                    FROM modello m
+                    INNER JOIN categoria c
+                    ON m.id_categoria = c.id
+                    LEFT JOIN sottocategoria s
+                    ON m.id_sottocategoria = s.id
+                    ORDER BY c.nome_categoria, m.nome_modello`)
+
+                    res.json(result.rows)
+                    res.status(201).json({ message: MESSAGES.GETLISTAMODELLIARRIVI, result: result.rows });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
     }
 })
 app.listen(3000, () => {

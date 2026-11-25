@@ -8,7 +8,7 @@ const MESSAGES = Object.freeze({
     STATE_POSITION_NOT_VALID:'Stato e posizione dell’articolo non coerenti',
     SERVER_STARTED: 'Server avviato sulla porta 3000',
     SOTTOCATEGORIA_CREATED: 'Sottocategoria creata',
-
+    GETLISTAMODELLIARRIVI:'Lista modelli con nomi sottocateg e categ associate',
     CATEGORIA_CREATED: 'Categoria creata',
     CATEGORIA_NAME_EXISTING: 'Nome categoria già esistente',
     CATEGORIA_NAME_EMPTY: 'Nome categoria obbligatorio',
