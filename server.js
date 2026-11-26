@@ -296,6 +296,25 @@ app.post('/sottocategoria', async (req, res) => {
 })
 
 /*ARRIVI*/
+app.get('/arrivi/modello', async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT  m.*,
+                c.nome_categoria,
+                s.nome_sottocategoria
+                    FROM modello m
+                    INNER JOIN categoria c
+                    ON m.id_categoria = c.id
+                    LEFT JOIN sottocategoria s
+                    ON m.id_sottocategoria = s.id
+                    ORDER BY c.nome_categoria, m.nome_modello`)
+
+                    res.json(result.rows)
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+})
 
 app.get('/arrivi/modello', async (req, res) => {
     try {
@@ -317,6 +336,27 @@ app.get('/arrivi/modello', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 })
+app.post('/arrivi', async (req, res) => {
+    const arrival = req.body;
+    try {
+        const result = await pool
+            .query(`INSERT INTO ARRIVAL(
+                    id_modello,
+                    data_creation,
+                    quantita,
+                    mittente)   
+                    VALUES ($1, $2, $3, $4) RETURNING *`,[arrival.id_modello, arrival.data_creation, 
+                    arrival.quantita, arrival.mittente])
+        
+        res.status(201).json({
+            message: MESSAGES.SOTTOCATEGORIA_CREATED
+        })            
+    } catch (error) {
+         console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+})
+
 app.listen(3000, () => {
     console.log(MESSAGES.SERVER_STARTED)
 })

@@ -12,7 +12,7 @@ const MESSAGES = Object.freeze({
     CATEGORIA_CREATED: 'Categoria creata',
     CATEGORIA_NAME_EXISTING: 'Nome categoria già esistente',
     CATEGORIA_NAME_EMPTY: 'Nome categoria obbligatorio',
-
+    ARRIVAL_SAVED: 'Nuovi arrivi salvati',
     SOTTOCATEGORIA_NAME_NOT_NULL: 'Inserisci il nome della sottocategoria',
     UNIQUE_SOTTOCATEGORIA_NAME: 'Questa sottocategoria esiste già nella categoria scelta'
 })
